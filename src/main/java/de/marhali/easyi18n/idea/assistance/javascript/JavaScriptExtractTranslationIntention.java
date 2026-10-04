@@ -26,6 +26,7 @@ import de.marhali.easyi18n.idea.dialog.TranslationDialogFactory;
 import de.marhali.easyi18n.idea.key.PluginKey;
 import de.marhali.easyi18n.idea.service.I18nProjectService;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -125,7 +126,11 @@ public class JavaScriptExtractTranslationIntention extends AbstractExtractTransl
         dialog.registerCallback((entry) -> {
             I18nKey key = entry.key();
 
-            String i18nFlavor = projectService.query(new FilledI18nFlavorQuery(moduleId, key));
+            // Prefer a namespaced translation function in scope, e.g. const t = useTranslations('footer')
+            String scopedCall = scopedTranslatorCall(literal, key);
+            String i18nFlavor = scopedCall != null
+                ? scopedCall
+                : projectService.query(new FilledI18nFlavorQuery(moduleId, key));
 
             WriteCommandAction
                 .writeCommandAction(project)
@@ -141,5 +146,22 @@ public class JavaScriptExtractTranslationIntention extends AbstractExtractTransl
         });
 
         dialog.show();
+    }
+
+    /**
+     * Builds a call to a namespaced translation function in scope, e.g. {@code t('title')} for key
+     * {@code footer.title} if {@code const t = useTranslations('footer')} is visible.
+     */
+    private @Nullable String scopedTranslatorCall(@NotNull JSLiteralExpression literal, @NotNull I18nKey key) {
+        JavaScriptTranslatorResolver.ScopedTranslator scoped =
+            JavaScriptTranslatorResolver.findScopedTranslator(literal, key.canonical());
+
+        if (scoped == null) {
+            return null;
+        }
+
+        String escapedKey = scoped.relativeKey().replace("\\", "\\\\").replace("'", "\\'");
+
+        return scoped.variableName() + "('" + escapedKey + "')";
     }
 }

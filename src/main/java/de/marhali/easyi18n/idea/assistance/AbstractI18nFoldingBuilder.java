@@ -46,11 +46,20 @@ public abstract class AbstractI18nFoldingBuilder extends FoldingBuilderEx implem
         /**
          * Callback invoked by {@link #collectLiterals} for each string literal candidate.
          *
-         * @param key   the non-blank string value of the literal
+         * @param keyCandidate the translation key candidate of the literal
          * @param node  the AST node of the literal (used for the FoldingDescriptor)
          * @param range the text range of the literal in document coordinates
          */
-        void accept(@NotNull String key, @NotNull ASTNode node, @NotNull TextRange range);
+        void accept(@NotNull I18nKeyCandidate keyCandidate, @NotNull ASTNode node, @NotNull TextRange range);
+
+        /**
+         * Shorthand for {@link #accept(I18nKeyCandidate, ASTNode, TextRange)} with an unscoped key.
+         *
+         * @param key   the non-blank string value of the literal
+         */
+        default void accept(@NotNull String key, @NotNull ASTNode node, @NotNull TextRange range) {
+            accept(I18nKeyCandidate.of(key), node, range);
+        }
     }
 
     /**
@@ -79,11 +88,11 @@ public abstract class AbstractI18nFoldingBuilder extends FoldingBuilderEx implem
         ModuleModificationTracker tracker = project.getService(ModuleModificationTracker.class);
         List<FoldingDescriptor> descriptors = new ArrayList<>();
 
-        collectLiterals(root, (key, node, range) -> {
+        collectLiterals(root, (keyCandidate, node, range) -> {
             if (range.isEmpty()) return;
 
             PossiblyUnavailable<Optional<I18nEntryPreview>> entryResponse =
-                projectService.query(new I18nEntryPreviewQuery(moduleId, I18nKeyCandidate.of(key)));
+                projectService.query(new I18nEntryPreviewQuery(moduleId, keyCandidate));
 
             if (!entryResponse.available()) {
                 project.getService(ScheduledModuleLoaderService.class).loadModule(moduleId);

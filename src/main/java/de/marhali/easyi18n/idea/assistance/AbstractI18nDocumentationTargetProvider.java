@@ -48,8 +48,8 @@ public abstract class AbstractI18nDocumentationTargetProvider implements Documen
             return List.of();
         }
 
-        String key = editorElement.i18nKey();
-        if (key.isBlank()) {
+        I18nKeyCandidate keyCandidate = editorElement.keyCandidate();
+        if (keyCandidate.canonical().isBlank()) {
             return List.of();
         }
 
@@ -70,7 +70,7 @@ public abstract class AbstractI18nDocumentationTargetProvider implements Documen
         }
 
         PossiblyUnavailable<Optional<I18nEntryPreview>> entryResponse
-            = projectService.query(new I18nEntryPreviewQuery(moduleId, I18nKeyCandidate.of(key)));
+            = projectService.query(new I18nEntryPreviewQuery(moduleId, keyCandidate));
 
         if (!entryResponse.available()) {
             project.getService(ScheduledModuleLoaderService.class).loadModule(moduleId);
@@ -78,24 +78,24 @@ public abstract class AbstractI18nDocumentationTargetProvider implements Documen
         }
 
         if (entryResponse.result() == null || entryResponse.result().isEmpty()) {
-            return namespaceDocumentationTargets(file, moduleId, key);
+            return namespaceDocumentationTargets(file, moduleId, keyCandidate);
         }
 
         return List.of(new I18nKeyDocumentationTarget(file, moduleId, entryResponse.result().get()));
     }
 
     private @NotNull List<? extends @NotNull DocumentationTarget> namespaceDocumentationTargets(
-        @NotNull PsiFile file, @NotNull ModuleId moduleId, @NotNull String key
+        @NotNull PsiFile file, @NotNull ModuleId moduleId, @NotNull I18nKeyCandidate keyCandidate
     ) {
         I18nProjectService projectService = file.getProject().getService(I18nProjectService.class);
 
         PossiblyUnavailable<List<I18nEntryPreview>> childrenResponse
-            = projectService.query(new I18nNamespacePreviewQuery(moduleId, I18nKeyCandidate.of(key)));
+            = projectService.query(new I18nNamespacePreviewQuery(moduleId, keyCandidate));
 
         if (!childrenResponse.available() || childrenResponse.result() == null || childrenResponse.result().isEmpty()) {
             return List.of();
         }
 
-        return List.of(new I18nNamespaceDocumentationTarget(file, moduleId, key, childrenResponse.result()));
+        return List.of(new I18nNamespaceDocumentationTarget(file, moduleId, keyCandidate.display(), childrenResponse.result()));
     }
 }

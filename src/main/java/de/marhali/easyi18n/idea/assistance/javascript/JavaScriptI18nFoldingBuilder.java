@@ -3,6 +3,7 @@ package de.marhali.easyi18n.idea.assistance.javascript;
 import com.intellij.lang.javascript.psi.JSLiteralExpression;
 import com.intellij.lang.javascript.psi.JSRecursiveWalkingElementVisitor;
 import com.intellij.psi.PsiElement;
+import de.marhali.easyi18n.core.domain.model.I18nKeyCandidate;
 import de.marhali.easyi18n.core.domain.rules.EditorLanguage;
 import de.marhali.easyi18n.idea.assistance.AbstractI18nFoldingBuilder;
 import org.jetbrains.annotations.NotNull;
@@ -46,12 +47,9 @@ public class JavaScriptI18nFoldingBuilder extends AbstractI18nFoldingBuilder {
                     return;
                 }
 
-                String keyPrefix = JavaScriptTranslatorResolver.resolveKeyPrefix(literal);
-                if (keyPrefix != null) {
-                    key = keyPrefix + key;
-                }
+                String namespace = JavaScriptTranslatorResolver.resolveNamespace(literal);
 
-                consumer.accept(key, literal.getNode(), literal.getTextRange());
+                consumer.accept(I18nKeyCandidate.scoped(namespace, key), literal.getNode(), literal.getTextRange());
             }
         });
     }

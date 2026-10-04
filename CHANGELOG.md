@@ -11,6 +11,8 @@
 - Namespace support for translation functions like `const t = useTranslations('footer')` so that `t('title')` resolves to `footer.title`
 - Namespaces (intermediate nodes of nested keys) are recognized as valid references and show their nested keys in the documentation popup
 - Editor rule constraint `CALLABLE_ORIGIN` to match calls of translation functions by the factory that created them
+- Namespaced translation keys also resolve in the namespace file layout, e.g. `useTranslations('connector.domains')` with `t('title')` resolves to `connector:domains.title`
+- Extract Translation uses a namespaced translation function in scope, e.g. `t('title')` instead of `t('footer.title')`
 
 ### Fixed
 

@@ -29,8 +29,8 @@ public record I18nKeyPrefix(
         return I18nKey.of(key.canonical().substring(canonicalPrefix.length()));
     }
 
-    public @NotNull I18nKey withCandidate(@NotNull I18nKeyCandidate keyCandidate) {
-        return I18nKey.of(canonicalPrefix + keyCandidate.canonical());
+    public @NotNull I18nKey withKey(@NotNull String canonicalKey) {
+        return I18nKey.of(canonicalPrefix + canonicalKey);
     }
 
     @Override

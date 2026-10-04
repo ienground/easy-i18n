@@ -90,4 +90,46 @@ public class I18nEntryPreviewQueryHandlerTest {
         Assert.assertNotNull(response.result());
         Assert.assertFalse(response.result().isPresent());
     }
+
+    @Test
+    public void test_scoped_key_resolves_nested_layout() {
+        var fixture = buildFixture();
+        populateTranslation(fixture, I18nKey.of("footer.links.about"), I18nValue.fromEscaped("About"));
+
+        PossiblyUnavailable<Optional<I18nEntryPreview>> response = fixture.handler().handle(
+            new I18nEntryPreviewQuery(MODULE_ID, I18nKeyCandidate.scoped("footer", "links.about"))
+        );
+
+        Assert.assertNotNull(response.result());
+        Assert.assertTrue(response.result().isPresent());
+        Assert.assertEquals("footer.links.about", response.result().get().key().canonical());
+    }
+
+    @Test
+    public void test_scoped_key_resolves_namespace_file_layout() {
+        var fixture = buildFixture();
+        populateTranslation(fixture, I18nKey.of("connector:domains.patternInvalidToast"), I18nValue.fromEscaped("Invalid"));
+
+        PossiblyUnavailable<Optional<I18nEntryPreview>> response = fixture.handler().handle(
+            new I18nEntryPreviewQuery(MODULE_ID, I18nKeyCandidate.scoped("connector", "domains.patternInvalidToast"))
+        );
+
+        Assert.assertNotNull(response.result());
+        Assert.assertTrue(response.result().isPresent());
+        Assert.assertEquals("connector:domains.patternInvalidToast", response.result().get().key().canonical());
+    }
+
+    @Test
+    public void test_nested_scoped_key_resolves_namespace_file_layout() {
+        var fixture = buildFixture();
+        populateTranslation(fixture, I18nKey.of("connector:domains.patternInvalidToast"), I18nValue.fromEscaped("Invalid"));
+
+        PossiblyUnavailable<Optional<I18nEntryPreview>> response = fixture.handler().handle(
+            new I18nEntryPreviewQuery(MODULE_ID, I18nKeyCandidate.scoped("connector.domains", "patternInvalidToast"))
+        );
+
+        Assert.assertNotNull(response.result());
+        Assert.assertTrue(response.result().isPresent());
+        Assert.assertEquals("connector:domains.patternInvalidToast", response.result().get().key().canonical());
+    }
 }

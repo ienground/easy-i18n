@@ -110,4 +110,32 @@ public class I18nNamespacePreviewQueryHandlerTest {
         Assert.assertTrue(query(fixture, "unknown").isEmpty());
         Assert.assertTrue(query(fixture, "").isEmpty());
     }
+
+    @Test
+    public void test_scoped_namespace_resolves_namespace_file_layout() {
+        var fixture = buildFixture();
+        populateTranslations(fixture, "connector:domains.patternInvalidToast", "connector:domains.title", "connector:other");
+
+        PossiblyUnavailable<List<I18nEntryPreview>> response = fixture.handler().handle(
+            new I18nNamespacePreviewQuery(MODULE_ID, I18nKeyCandidate.scoped("connector", "domains"))
+        );
+
+        Assert.assertNotNull(response.result());
+        Assert.assertEquals(
+            List.of("connector:domains.patternInvalidToast", "connector:domains.title"),
+            response.result().stream().map(entry -> entry.key().canonical()).toList()
+        );
+    }
+
+    @Test
+    public void test_nested_namespace_declaration_resolves_namespace_file_layout() {
+        var fixture = buildFixture();
+        populateTranslations(fixture, "connector:domains.patternInvalidToast", "connector:other");
+
+        // useTranslations('connector.domains')
+        Assert.assertEquals(
+            List.of("connector:domains.patternInvalidToast"),
+            query(fixture, "connector.domains").stream().map(entry -> entry.key().canonical()).toList()
+        );
+    }
 }

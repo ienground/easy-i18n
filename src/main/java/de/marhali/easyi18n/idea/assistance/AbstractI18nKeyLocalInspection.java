@@ -52,7 +52,7 @@ public abstract class AbstractI18nKeyLocalInspection extends LocalInspectionTool
      *
      * @param literalElement the PSI element representing the string literal (used as problem target)
      * @param key            the non-blank string value of the literal. The translation key is taken from
-     *                       {@link EditorElement#i18nKey()} to respect scoped key prefixes
+     *                       {@link EditorElement#keyCandidate()} to respect scoped namespaces
      * @param editorElement  the extracted editor element, or {@code null} if no rule matches
      * @param containingFile the file containing the literal (used for module lookup)
      * @param holder         the problems holder to register problems into
@@ -74,13 +74,13 @@ public abstract class AbstractI18nKeyLocalInspection extends LocalInspectionTool
         if (moduleIdOpt.isEmpty()) return;
 
         ModuleId moduleId = moduleIdOpt.get();
-        String i18nKey = editorElement.i18nKey();
+        I18nKeyCandidate keyCandidate = editorElement.keyCandidate();
 
         Boolean matched = projectService.query(new MatchEditorElementQuery(moduleId, editorElement));
         if (!matched) return;
 
         PossiblyUnavailable<Optional<I18nEntryPreview>> entryResponse =
-            projectService.query(new I18nEntryPreviewQuery(moduleId, I18nKeyCandidate.of(i18nKey)));
+            projectService.query(new I18nEntryPreviewQuery(moduleId, keyCandidate));
 
         if (!entryResponse.available()) {
             project.getService(ScheduledModuleLoaderService.class).loadModule(moduleId);
@@ -91,14 +91,41 @@ public abstract class AbstractI18nKeyLocalInspection extends LocalInspectionTool
 
         // Namespaces (intermediate nodes like "footer" for "footer.title") are valid references
         PossiblyUnavailable<List<I18nEntryPreview>> namespaceResponse =
-            projectService.query(new I18nNamespacePreviewQuery(moduleId, I18nKeyCandidate.of(i18nKey)));
+            projectService.query(new I18nNamespacePreviewQuery(moduleId, keyCandidate));
         if (namespaceResponse.result() != null && !namespaceResponse.result().isEmpty()) return;
 
-        NullableI18nEntry entry = projectService.query(new GuessNullableI18nEntryQuery(moduleId, i18nKey));
+        String missingKey = qualifyMissingKey(projectService, moduleId, keyCandidate);
+        NullableI18nEntry entry = projectService.query(new GuessNullableI18nEntryQuery(moduleId, missingKey));
         holder.registerProblem(
             literalElement,
-            PluginBundle.message("editor.intention.unresolved.description", i18nKey),
+            PluginBundle.message("editor.intention.unresolved.description", missingKey),
             new I18nKeyQuickFixIntentionAction(literalElement, moduleId, entry)
         );
+    }
+
+    /**
+     * Qualifies a missing scoped key using the layout of existing keys within the same namespace,
+     * e.g. {@code connector:domains.title} if the module already contains {@code connector:...} keys.
+     */
+    private static @NotNull String qualifyMissingKey(
+        @NotNull I18nProjectService projectService,
+        @NotNull ModuleId moduleId,
+        @NotNull I18nKeyCandidate keyCandidate
+    ) {
+        String namespace = keyCandidate.namespace();
+        if (namespace == null) {
+            return keyCandidate.canonical();
+        }
+
+        PossiblyUnavailable<List<I18nEntryPreview>> siblingsResponse =
+            projectService.query(new I18nNamespacePreviewQuery(moduleId, I18nKeyCandidate.of(namespace)));
+
+        List<String> qualifiedKeys = keyCandidate.qualified();
+        boolean namespaceFileLayout = siblingsResponse.result() != null
+            && !siblingsResponse.result().isEmpty()
+            && siblingsResponse.result().get(0).key().canonical().contains(":");
+
+        // Second variant denotes the namespace file layout
+        return namespaceFileLayout && qualifiedKeys.size() > 1 ? qualifiedKeys.get(1) : keyCandidate.display();
     }
 }

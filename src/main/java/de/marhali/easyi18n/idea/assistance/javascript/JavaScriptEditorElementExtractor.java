@@ -180,7 +180,7 @@ public class JavaScriptEditorElementExtractor implements EditorElementExtractor<
         if (translator != null) {
             builder.callableOrigin(translator.origin());
             if (argumentIndex == 0) {
-                builder.keyPrefix(translator.keyPrefix());
+                builder.keyNamespace(translator.namespace());
             }
         }
     }

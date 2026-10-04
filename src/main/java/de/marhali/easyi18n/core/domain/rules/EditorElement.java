@@ -1,5 +1,6 @@
 package de.marhali.easyi18n.core.domain.rules;
 
+import de.marhali.easyi18n.core.domain.model.I18nKeyCandidate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,7 +39,7 @@ public final class EditorElement {
     private final @NotNull EditorFilePath filePath;
     private final boolean inTestSources;
 
-    private final @Nullable String keyPrefix;
+    private final @Nullable String keyNamespace;
 
     private EditorElement(Builder builder) {
         this.language = Objects.requireNonNull(builder.language, "language must not be null");
@@ -60,7 +61,7 @@ public final class EditorElement {
         this.importSources = Collections.unmodifiableSet(builder.importSources);
         this.filePath = builder.filePath;
         this.inTestSources = builder.inTestSources;
-        this.keyPrefix = builder.keyPrefix;
+        this.keyNamespace = builder.keyNamespace;
     }
 
     public static @NotNull Builder builder(@NotNull EditorLanguage language,
@@ -89,15 +90,15 @@ public final class EditorElement {
     public @NotNull Set<String> importSources() { return importSources; }
     public @NotNull EditorFilePath filePath() { return filePath; }
     public boolean inTestSources() { return inTestSources; }
-    public @Nullable String keyPrefix() { return keyPrefix; }
+    public @Nullable String keyNamespace() { return keyNamespace; }
 
     /**
-     * Translation key referenced by this element. Applies the scoped {@link #keyPrefix()} (e.g. a namespace
-     * bound to the translation function) to the {@link #literalValue()}.
-     * @return Canonical translation key candidate
+     * Translation key candidate referenced by this element. Scopes the {@link #literalValue()} to the
+     * {@link #keyNamespace()} bound to the translation function (e.g. {@code useTranslations('footer')}).
+     * @return {@link I18nKeyCandidate}
      */
-    public @NotNull String i18nKey() {
-        return keyPrefix != null ? keyPrefix + literalValue : literalValue;
+    public @NotNull I18nKeyCandidate keyCandidate() {
+        return I18nKeyCandidate.scoped(keyNamespace, literalValue);
     }
 
     public static final class Builder {
@@ -121,7 +122,7 @@ public final class EditorElement {
         private Set<String> importSources = Collections.emptySet();
         private EditorFilePath filePath;
         private boolean inTestSources;
-        private String keyPrefix;
+        private String keyNamespace;
 
         private Builder(EditorLanguage language,
                         LiteralKind literalKind,
@@ -208,8 +209,8 @@ public final class EditorElement {
             return this;
         }
 
-        public @NotNull Builder keyPrefix(@Nullable String value) {
-            this.keyPrefix = value;
+        public @NotNull Builder keyNamespace(@Nullable String value) {
+            this.keyNamespace = value;
             return this;
         }
 

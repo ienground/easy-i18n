@@ -83,7 +83,7 @@ public class I18nRuleEngineTest {
             )
             .callableName("tShell")
             .callableOrigin("useTranslations")
-            .keyPrefix("shell.")
+            .keyNamespace("shell")
             .argumentIndex(0)
             .build();
 
@@ -99,7 +99,7 @@ public class I18nRuleEngineTest {
 
         Assert.assertTrue(engine.match(scoped).matched());
         Assert.assertFalse(engine.match(unrelated).matched());
-        Assert.assertEquals("shell.title", scoped.i18nKey());
-        Assert.assertEquals("title", unrelated.i18nKey());
+        Assert.assertEquals(List.of("shell.title", "shell:title"), scoped.keyCandidate().qualified());
+        Assert.assertEquals(List.of("title"), unrelated.keyCandidate().qualified());
     }
 }

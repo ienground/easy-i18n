@@ -4,6 +4,8 @@ import com.intellij.lang.javascript.psi.*;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiInvalidElementAccessException;
+import com.intellij.psi.util.PsiTreeUtil;
+import de.marhali.easyi18n.core.domain.model.I18nKeyCandidate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,7 +34,6 @@ public final class JavaScriptTranslatorResolver {
     private static final Set<String> TRANSLATOR_METHODS = Set.of("rich", "markup", "raw", "has");
 
     private static final String NAMESPACE_OPTION = "namespace";
-    private static final String NAMESPACE_SEPARATOR = ".";
 
     private JavaScriptTranslatorResolver() {}
 
@@ -42,10 +43,58 @@ public final class JavaScriptTranslatorResolver {
      * @param origin Name of the factory function that created the translation function
      * @param namespace Statically known namespace or {@code null} if unscoped or unknown
      */
-    public record Translator(@NotNull String origin, @Nullable String namespace) {
-        public @Nullable String keyPrefix() {
-            return namespace != null && !namespace.isEmpty() ? namespace + NAMESPACE_SEPARATOR : null;
+    public record Translator(@NotNull String origin, @Nullable String namespace) {}
+
+    /**
+     * Translation function variable which is visible at a specific location.
+     *
+     * @param variableName Name of the variable holding the translation function (e.g. {@code t})
+     * @param translator Translation function details
+     * @param relativeKey Translation key relative to the namespace of the translation function
+     */
+    public record ScopedTranslator(@NotNull String variableName, @NotNull Translator translator, @NotNull String relativeKey) {}
+
+    /**
+     * Finds the most specific namespaced translation function visible at the given location that can
+     * reference the given key, e.g. {@code t} from {@code const t = useTranslations('footer')} for
+     * {@code footer.title} or {@code footer:title}.
+     * @param context Location that should reference the key
+     * @param key Fully qualified translation key
+     * @return {@link ScopedTranslator} or {@code null} if no suitable translation function is in scope
+     */
+    public static @Nullable ScopedTranslator findScopedTranslator(@NotNull PsiElement context, @NotNull String key) {
+        ScopedTranslator best = null;
+        int bestNamespaceLength = -1;
+
+        for (JSVariable variable : PsiTreeUtil.findChildrenOfType(context.getContainingFile(), JSVariable.class)) {
+            String variableName = variable.getName();
+            PsiElement scope = variable.getDeclarationScope();
+
+            if (variableName == null || scope == null || !PsiTreeUtil.isAncestor(scope, context, false)
+                || !(unwrap(variable.getInitializer()) instanceof JSCallExpression factoryCall)) {
+                continue;
+            }
+
+            String factoryName = callableName(factoryCall);
+            if (!NAMESPACED_FACTORIES.contains(factoryName)) {
+                continue;
+            }
+
+            Translator translator = new Translator(factoryName, extractNamespace(factoryCall));
+            if (translator.namespace() == null && factoryCall.getArguments().length > 0) {
+                continue; // Namespace is not statically known
+            }
+
+            String relativeKey = I18nKeyCandidate.relativize(translator.namespace(), key);
+            int namespaceLength = translator.namespace() != null ? translator.namespace().length() : 0;
+
+            if (relativeKey != null && namespaceLength > bestNamespaceLength) {
+                best = new ScopedTranslator(variableName, translator, relativeKey);
+                bestNamespaceLength = namespaceLength;
+            }
         }
+
+        return best;
     }
 
     /**
@@ -81,11 +130,11 @@ public final class JavaScriptTranslatorResolver {
     }
 
     /**
-     * Resolves the key prefix applied to the given literal if it is the key argument of a translation function.
+     * Resolves the namespace applied to the given literal if it is the key argument of a translation function.
      * @param literal String literal
-     * @return Key prefix (e.g. {@code footer.}) or {@code null}
+     * @return Namespace (e.g. {@code footer}) or {@code null}
      */
-    public static @Nullable String resolveKeyPrefix(@NotNull JSLiteralExpression literal) {
+    public static @Nullable String resolveNamespace(@NotNull JSLiteralExpression literal) {
         if (!(literal.getParent() instanceof JSArgumentList argumentList)
             || !(argumentList.getParent() instanceof JSCallExpression callExpression)) {
             return null;
@@ -97,7 +146,7 @@ public final class JavaScriptTranslatorResolver {
         }
 
         Translator translator = resolve(callExpression);
-        return translator != null ? translator.keyPrefix() : null;
+        return translator != null ? translator.namespace() : null;
     }
 
     /**

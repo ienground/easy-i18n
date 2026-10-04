@@ -104,7 +104,7 @@ public class JavaScriptI18nPsiReferenceContributor extends PsiReferenceContribut
             }
 
             PossiblyUnavailable<Optional<I18nEntryPreview>> entryResponse
-                = projectService.query(new I18nEntryPreviewQuery(moduleId, I18nKeyCandidate.of(editorElement.i18nKey())));
+                = projectService.query(new I18nEntryPreviewQuery(moduleId, editorElement.keyCandidate()));
 
             if (!entryResponse.available()) {
                 // Response is not available - module is not loaded yet

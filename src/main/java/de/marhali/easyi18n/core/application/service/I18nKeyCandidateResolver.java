@@ -18,11 +18,6 @@ import java.util.*;
  */
 public class I18nKeyCandidateResolver {
 
-    /**
-     * Characters that separate a namespace from its nested keys (e.g. {@code footer.title} or {@code common:title}).
-     */
-    private static final String NAMESPACE_SEPARATORS = ".:";
-
     private final @NotNull ProjectConfigPort projectConfigPort;
     private final @NotNull I18nStore store;
 
@@ -53,7 +48,7 @@ public class I18nKeyCandidateResolver {
     public @NotNull List<@NotNull I18nEntry> resolveNamespace(@NotNull ModuleId moduleId, @NotNull I18nKeyCandidate keyCandidate) {
         I18nModule moduleStore = store.getSnapshot().getModuleOrThrow(moduleId);
 
-        for (I18nKey key : constructKeys(moduleId, keyCandidate)) {
+        for (I18nKey key : constructNamespaceKeys(moduleId, keyCandidate)) {
             List<I18nEntry> children = new ArrayList<>();
 
             for (Map.Entry<@NotNull I18nKey, @NotNull I18nContent> entry : moduleStore.translations().entrySet()) {
@@ -72,6 +67,22 @@ public class I18nKeyCandidateResolver {
         return List.of();
     }
 
+    private @NotNull Set<@NotNull I18nKey> constructNamespaceKeys(@NotNull ModuleId moduleId, @NotNull I18nKeyCandidate keyCandidate) {
+        var keys = new LinkedHashSet<I18nKey>();
+
+        for (I18nKey key : constructKeys(moduleId, keyCandidate)) {
+            keys.add(key);
+
+            // Namespace declarations like useTranslations('connector.domains') in namespace file layout
+            String namespaceFileKey = I18nKeyCandidate.toNamespaceFileLayout(key.canonical());
+            if (namespaceFileKey != null) {
+                keys.add(I18nKey.of(namespaceFileKey));
+            }
+        }
+
+        return keys;
+    }
+
     private boolean isNamespaceOf(@NotNull I18nKey namespace, @NotNull I18nKey key) {
         String ns = namespace.canonical();
         String canonical = key.canonical();
@@ -80,17 +91,23 @@ public class I18nKeyCandidateResolver {
             return false;
         }
 
-        char separator = canonical.charAt(ns.length());
-        return NAMESPACE_SEPARATORS.indexOf(separator) >= 0;
+        String separator = canonical.substring(ns.length(), ns.length() + 1);
+        return I18nKeyCandidate.NAMESPACE_SEPARATORS.contains(separator);
     }
 
     private @NotNull Set<@NotNull I18nKey> constructKeys(@NotNull ModuleId moduleId, @NotNull I18nKeyCandidate keyCandidate) {
-        var keys = new HashSet<I18nKey>();
+        // Ordered by preference: qualified variants first, prefixed variants afterwards
+        var keys = new LinkedHashSet<I18nKey>();
+        List<String> qualifiedKeys = keyCandidate.qualified();
 
-        keys.add(I18nKey.of(keyCandidate.canonical()));
+        for (String qualifiedKey : qualifiedKeys) {
+            keys.add(I18nKey.of(qualifiedKey));
+        }
 
         for (I18nKeyPrefix keyPrefix : getModuleDefaultKeyPrefixes(moduleId)) {
-            keys.add(keyPrefix.withCandidate(keyCandidate));
+            for (String qualifiedKey : qualifiedKeys) {
+                keys.add(keyPrefix.withKey(qualifiedKey));
+            }
         }
 
         return keys;

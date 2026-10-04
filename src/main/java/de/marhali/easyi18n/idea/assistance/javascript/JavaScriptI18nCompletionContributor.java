@@ -14,6 +14,7 @@ import de.marhali.easyi18n.core.application.query.AllModuleI18nEntryPreviewQuery
 import de.marhali.easyi18n.core.application.query.MatchEditorElementQuery;
 import de.marhali.easyi18n.core.application.query.ModuleIdByEditorFilePathQuery;
 import de.marhali.easyi18n.core.domain.model.I18nEntryPreview;
+import de.marhali.easyi18n.core.domain.model.I18nKeyCandidate;
 import de.marhali.easyi18n.core.domain.model.ModuleId;
 import de.marhali.easyi18n.core.domain.rules.EditorElement;
 import de.marhali.easyi18n.core.domain.rules.EditorFilePath;
@@ -138,17 +139,13 @@ public class JavaScriptI18nCompletionContributor extends AbstractI18nCompletionC
                         return;
                     }
 
-                    String keyPrefix = editorElement.keyPrefix();
+                    I18nKeyCandidate keyCandidate = editorElement.keyCandidate();
 
                     for (I18nEntryPreview suggestion : suggestions) {
-                        String key = suggestion.key().canonical();
-
-                        if (keyPrefix != null) {
-                            // Scoped translation function, e.g. const t = useTranslations('footer')
-                            if (!key.startsWith(keyPrefix)) {
-                                continue;
-                            }
-                            key = key.substring(keyPrefix.length());
+                        // Scoped translation function, e.g. const t = useTranslations('footer')
+                        String key = keyCandidate.relativize(suggestion.key().canonical());
+                        if (key == null) {
+                            continue;
                         }
 
                         LookupElementBuilder builder = LookupElementBuilder.create(key)
@@ -170,7 +167,8 @@ public class JavaScriptI18nCompletionContributor extends AbstractI18nCompletionC
     private static @NotNull Set<String> collectNamespaces(@NotNull List<I18nEntryPreview> entries) {
         Set<String> namespaces = new TreeSet<>();
         for (I18nEntryPreview entry : entries) {
-            String key = entry.key().canonical();
+            // Namespace file layout (connector:domains.title) is declared as useTranslations('connector.domains')
+            String key = entry.key().canonical().replaceFirst(":", ".");
             for (int index = key.indexOf('.'); index > 0; index = key.indexOf('.', index + 1)) {
                 namespaces.add(key.substring(0, index));
             }
