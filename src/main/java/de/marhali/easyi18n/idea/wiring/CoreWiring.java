@@ -97,6 +97,7 @@ public final class CoreWiring {
         queries.register(I18nEntryByKeyCandidateQuery.class, new I18nEntryByKeyCandidateQueryHandler(store, keyResolver));
         queries.register(I18nEntryPreviewQuery.class, new I18nEntryPreviewQueryHandler(store, keyResolver, projectConfigPort));
         queries.register(AllModuleI18nEntryPreviewQuery.class, new AllModuleI18nEntryPreviewQueryHandler(store, projectConfigPort));
+        queries.register(I18nNamespacePreviewQuery.class, new I18nNamespacePreviewQueryHandler(store, keyResolver, projectConfigPort));
         queries.register(ModuleIdByEditorFilePathQuery.class, new ModuleIdByEditorFilePathQueryHandler(moduleIdByEditorFilePathResolver));
         queries.register(MatchEditorElementQuery.class, new MatchEditorElementQueryHandler(cachedModuleRules));
         queries.register(FilledI18nFlavorQuery.class, new FilledI18nFlavorQueryHandler(cachedModuleTemplates));

@@ -32,6 +32,16 @@ public class JavaScriptEditorElementExtractor implements EditorElementExtractor<
         this.language = language;
     }
 
+    /**
+     * Checks whether the given file is a TypeScript file, including TSX.
+     * @param file Psi file
+     * @return {@code true} for TypeScript, otherwise {@code false}
+     */
+    public static boolean isTypeScript(@NotNull PsiFile file) {
+        String languageId = file.getLanguage().getID();
+        return "TypeScript".equals(languageId) || "TypeScript JSX".equals(languageId);
+    }
+
     public @Nullable EditorElement extract(@NotNull JSLiteralExpression literal, @Nullable PsiFile psiFile) {
         if (!literal.isStringLiteral()) {
             return null;
@@ -164,6 +174,15 @@ public class JavaScriptEditorElementExtractor implements EditorElementExtractor<
                 builder.receiverTypeFqn(qualifier.getText());
             }
         }
+
+        // Translation function bound to a variable, e.g. const t = useTranslations('footer')
+        JavaScriptTranslatorResolver.Translator translator = JavaScriptTranslatorResolver.resolve(callExpression);
+        if (translator != null) {
+            builder.callableOrigin(translator.origin());
+            if (argumentIndex == 0) {
+                builder.keyPrefix(translator.keyPrefix());
+            }
+        }
     }
 
     private void fillDeclarationFacts(@NotNull JSLiteralExpression literal, @NotNull EditorElement.Builder builder) {
@@ -220,6 +239,14 @@ public class JavaScriptEditorElementExtractor implements EditorElementExtractor<
             String name = property.getName();
             builder.propertyName(name);
             builder.propertyPath(name);
+
+            // Options object passed to a call, e.g. getTranslations({namespace: 'footer'})
+            if (property.getParent() instanceof JSObjectLiteralExpression objectLiteral
+                && objectLiteral.getParent() instanceof JSArgumentList
+                && objectLiteral.getParent().getParent() instanceof JSCallExpression callExpression
+                && callExpression.getMethodExpression() instanceof JSReferenceExpression refExpr) {
+                builder.callableName(refExpr.getReferenceName());
+            }
         }
     }
 

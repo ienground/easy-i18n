@@ -23,6 +23,7 @@ public final class EditorElement {
     private final @Nullable String callableName;
     private final @Nullable String callableFqn;
     private final @Nullable String receiverTypeFqn;
+    private final @Nullable String callableOrigin;
     private final @Nullable Integer argumentIndex;
     private final @Nullable String argumentName;
 
@@ -37,6 +38,8 @@ public final class EditorElement {
     private final @NotNull EditorFilePath filePath;
     private final boolean inTestSources;
 
+    private final @Nullable String keyPrefix;
+
     private EditorElement(Builder builder) {
         this.language = Objects.requireNonNull(builder.language, "language must not be null");
         this.literalKind = Objects.requireNonNull(builder.literalKind, "literalKind must not be null");
@@ -46,6 +49,7 @@ public final class EditorElement {
         this.callableName = builder.callableName;
         this.callableFqn = builder.callableFqn;
         this.receiverTypeFqn = builder.receiverTypeFqn;
+        this.callableOrigin = builder.callableOrigin;
         this.argumentIndex = builder.argumentIndex;
         this.argumentName = builder.argumentName;
         this.declarationName = builder.declarationName;
@@ -56,6 +60,7 @@ public final class EditorElement {
         this.importSources = Collections.unmodifiableSet(builder.importSources);
         this.filePath = builder.filePath;
         this.inTestSources = builder.inTestSources;
+        this.keyPrefix = builder.keyPrefix;
     }
 
     public static @NotNull Builder builder(@NotNull EditorLanguage language,
@@ -73,6 +78,7 @@ public final class EditorElement {
     public @Nullable String callableName() { return callableName; }
     public @Nullable String callableFqn() { return callableFqn; }
     public @Nullable String receiverTypeFqn() { return receiverTypeFqn; }
+    public @Nullable String callableOrigin() { return callableOrigin; }
     public @Nullable Integer argumentIndex() { return argumentIndex; }
     public @Nullable String argumentName() { return argumentName; }
     public @Nullable String declarationName() { return declarationName; }
@@ -83,6 +89,16 @@ public final class EditorElement {
     public @NotNull Set<String> importSources() { return importSources; }
     public @NotNull EditorFilePath filePath() { return filePath; }
     public boolean inTestSources() { return inTestSources; }
+    public @Nullable String keyPrefix() { return keyPrefix; }
+
+    /**
+     * Translation key referenced by this element. Applies the scoped {@link #keyPrefix()} (e.g. a namespace
+     * bound to the translation function) to the {@link #literalValue()}.
+     * @return Canonical translation key candidate
+     */
+    public @NotNull String i18nKey() {
+        return keyPrefix != null ? keyPrefix + literalValue : literalValue;
+    }
 
     public static final class Builder {
         private final EditorLanguage language;
@@ -94,6 +110,7 @@ public final class EditorElement {
         private String callableName;
         private String callableFqn;
         private String receiverTypeFqn;
+        private String callableOrigin;
         private Integer argumentIndex;
         private String argumentName;
         private String declarationName;
@@ -104,6 +121,7 @@ public final class EditorElement {
         private Set<String> importSources = Collections.emptySet();
         private EditorFilePath filePath;
         private boolean inTestSources;
+        private String keyPrefix;
 
         private Builder(EditorLanguage language,
                         LiteralKind literalKind,
@@ -132,6 +150,11 @@ public final class EditorElement {
 
         public @NotNull Builder receiverTypeFqn(@Nullable String value) {
             this.receiverTypeFqn = value;
+            return this;
+        }
+
+        public @NotNull Builder callableOrigin(@Nullable String value) {
+            this.callableOrigin = value;
             return this;
         }
 
@@ -182,6 +205,11 @@ public final class EditorElement {
 
         public @NotNull Builder inTestSources(boolean value) {
             this.inTestSources = value;
+            return this;
+        }
+
+        public @NotNull Builder keyPrefix(@Nullable String value) {
+            this.keyPrefix = value;
             return this;
         }
 

@@ -30,7 +30,7 @@ public class JavaScriptI18nDocumentationTargetProvider extends AbstractI18nDocum
 
     private static @NotNull EditorLanguage detectLanguage(@NotNull PsiFile file) {
         return switch (file.getLanguage().getID()) {
-            case "TypeScript" -> EditorLanguage.TYPESCRIPT;
+            case "TypeScript", "TypeScript JSX" -> EditorLanguage.TYPESCRIPT;
             case "VUE" -> EditorLanguage.VUE;
             case "Svelte" -> EditorLanguage.SVELTE;
             default -> EditorLanguage.JAVASCRIPT;

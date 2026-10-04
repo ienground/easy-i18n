@@ -20,6 +20,7 @@ public enum ProjectConfigModulePreset {
     RAILS(RailsModulePreset.class),
     VUE_I18N(VueI18nModulePreset.class),
     REACT_I18NEXT(ReactI18nextModulePreset.class),
+    NEXT_INTL(NextIntlModulePreset.class),
     SPRING_BOOT(SpringBootModulePreset.class),
     LARAVEL(LaravelModulePreset.class),
     ;

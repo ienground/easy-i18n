@@ -8,6 +8,7 @@ import com.intellij.psi.PsiFile;
 import de.marhali.easyi18n.core.application.cqrs.PossiblyUnavailable;
 import de.marhali.easyi18n.core.application.query.GuessNullableI18nEntryQuery;
 import de.marhali.easyi18n.core.application.query.I18nEntryPreviewQuery;
+import de.marhali.easyi18n.core.application.query.I18nNamespacePreviewQuery;
 import de.marhali.easyi18n.core.application.query.MatchEditorElementQuery;
 import de.marhali.easyi18n.core.application.query.ModuleIdByEditorFilePathQuery;
 import de.marhali.easyi18n.core.domain.model.I18nEntryPreview;
@@ -22,6 +23,7 @@ import de.marhali.easyi18n.idea.service.ScheduledModuleLoaderService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -49,7 +51,8 @@ public abstract class AbstractI18nKeyLocalInspection extends LocalInspectionTool
      * and no problem is registered.
      *
      * @param literalElement the PSI element representing the string literal (used as problem target)
-     * @param key            the non-blank string value of the literal
+     * @param key            the non-blank string value of the literal. The translation key is taken from
+     *                       {@link EditorElement#i18nKey()} to respect scoped key prefixes
      * @param editorElement  the extracted editor element, or {@code null} if no rule matches
      * @param containingFile the file containing the literal (used for module lookup)
      * @param holder         the problems holder to register problems into
@@ -71,12 +74,13 @@ public abstract class AbstractI18nKeyLocalInspection extends LocalInspectionTool
         if (moduleIdOpt.isEmpty()) return;
 
         ModuleId moduleId = moduleIdOpt.get();
+        String i18nKey = editorElement.i18nKey();
 
         Boolean matched = projectService.query(new MatchEditorElementQuery(moduleId, editorElement));
         if (!matched) return;
 
         PossiblyUnavailable<Optional<I18nEntryPreview>> entryResponse =
-            projectService.query(new I18nEntryPreviewQuery(moduleId, I18nKeyCandidate.of(key)));
+            projectService.query(new I18nEntryPreviewQuery(moduleId, I18nKeyCandidate.of(i18nKey)));
 
         if (!entryResponse.available()) {
             project.getService(ScheduledModuleLoaderService.class).loadModule(moduleId);
@@ -85,10 +89,15 @@ public abstract class AbstractI18nKeyLocalInspection extends LocalInspectionTool
 
         if (entryResponse.result() == null || entryResponse.result().isPresent()) return;
 
-        NullableI18nEntry entry = projectService.query(new GuessNullableI18nEntryQuery(moduleId, key));
+        // Namespaces (intermediate nodes like "footer" for "footer.title") are valid references
+        PossiblyUnavailable<List<I18nEntryPreview>> namespaceResponse =
+            projectService.query(new I18nNamespacePreviewQuery(moduleId, I18nKeyCandidate.of(i18nKey)));
+        if (namespaceResponse.result() != null && !namespaceResponse.result().isEmpty()) return;
+
+        NullableI18nEntry entry = projectService.query(new GuessNullableI18nEntryQuery(moduleId, i18nKey));
         holder.registerProblem(
             literalElement,
-            PluginBundle.message("editor.intention.unresolved.description", key),
+            PluginBundle.message("editor.intention.unresolved.description", i18nKey),
             new I18nKeyQuickFixIntentionAction(literalElement, moduleId, entry)
         );
     }

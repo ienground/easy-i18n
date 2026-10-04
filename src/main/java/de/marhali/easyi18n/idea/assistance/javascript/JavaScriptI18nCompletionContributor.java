@@ -27,6 +27,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * @author marhali
@@ -125,10 +127,33 @@ public class JavaScriptI18nCompletionContributor extends AbstractI18nCompletionC
 
                     CompletionResultSet prefixed = completionResultSet.withPrefixMatcher(prefix);
 
+                    if (JavaScriptTranslatorResolver.isNamespaceDeclaration(literal)) {
+                        // useTranslations('...') expects a namespace instead of a translation key
+                        for (String namespace : collectNamespaces(suggestions)) {
+                            prefixed.addElement(LookupElementBuilder.create(namespace)
+                                .withInsertHandler(AbstractI18nCompletionContributor::replaceCompletionRange)
+                                .withTypeText("namespace")
+                                .withIcon(PluginIcon.TRANSLATE_ICON));
+                        }
+                        return;
+                    }
+
+                    String keyPrefix = editorElement.keyPrefix();
+
                     for (I18nEntryPreview suggestion : suggestions) {
-                        LookupElementBuilder builder = LookupElementBuilder.create(suggestion.key().canonical())
+                        String key = suggestion.key().canonical();
+
+                        if (keyPrefix != null) {
+                            // Scoped translation function, e.g. const t = useTranslations('footer')
+                            if (!key.startsWith(keyPrefix)) {
+                                continue;
+                            }
+                            key = key.substring(keyPrefix.length());
+                        }
+
+                        LookupElementBuilder builder = LookupElementBuilder.create(key)
                             .withInsertHandler(AbstractI18nCompletionContributor::replaceCompletionRange)
-                            .withPresentableText(suggestion.key().canonical())
+                            .withPresentableText(key)
                             .withIcon(PluginIcon.TRANSLATE_ICON);
 
                         if (suggestion.previewValue() != null) {
@@ -142,9 +167,20 @@ public class JavaScriptI18nCompletionContributor extends AbstractI18nCompletionC
         );
     }
 
+    private static @NotNull Set<String> collectNamespaces(@NotNull List<I18nEntryPreview> entries) {
+        Set<String> namespaces = new TreeSet<>();
+        for (I18nEntryPreview entry : entries) {
+            String key = entry.key().canonical();
+            for (int index = key.indexOf('.'); index > 0; index = key.indexOf('.', index + 1)) {
+                namespaces.add(key.substring(0, index));
+            }
+        }
+        return namespaces;
+    }
+
     private @NotNull EditorLanguage effectiveLanguage(@NotNull com.intellij.psi.PsiFile file) {
         if (language == EditorLanguage.JAVASCRIPT
-                && "TypeScript".equals(file.getLanguage().getID())) {
+                && JavaScriptEditorElementExtractor.isTypeScript(file)) {
             return EditorLanguage.TYPESCRIPT;
         }
         return language;

@@ -75,6 +75,7 @@ public final class I18nRuleEngine {
             case CALLABLE_NAME -> matchesText(editorElement.callableName(), constraint);
             case CALLABLE_FQN -> matchesText(editorElement.callableFqn(), constraint);
             case RECEIVER_TYPE_FQN -> matchesText(editorElement.receiverTypeFqn(), constraint);
+            case CALLABLE_ORIGIN -> matchesText(editorElement.callableOrigin(), constraint);
             case ARGUMENT_INDEX -> matchesInteger(editorElement.argumentIndex(), constraint);
             case ARGUMENT_NAME -> matchesText(editorElement.argumentName(), constraint);
             case DECLARATION_NAME -> matchesText(editorElement.declarationName(), constraint);

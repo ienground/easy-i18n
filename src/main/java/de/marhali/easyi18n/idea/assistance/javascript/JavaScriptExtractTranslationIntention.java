@@ -77,7 +77,7 @@ public class JavaScriptExtractTranslationIntention extends AbstractExtractTransl
         literal.putUserData(PluginKey.MODULE_ID, moduleId);
 
         EditorLanguage effectiveLang = (language == EditorLanguage.JAVASCRIPT
-                && "TypeScript".equals(containingFile.getLanguage().getID()))
+                && JavaScriptEditorElementExtractor.isTypeScript(containingFile))
             ? EditorLanguage.TYPESCRIPT : language;
         JavaScriptEditorElementExtractor extractor = new JavaScriptEditorElementExtractor(effectiveLang);
         EditorElement editorElement = extractor.extract(literal, literal.getContainingFile());

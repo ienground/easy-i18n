@@ -56,7 +56,7 @@ public class JavaScriptI18nKeyLocalInspection extends AbstractI18nKeyLocalInspec
      */
     protected EditorLanguage effectiveLanguage(@NotNull com.intellij.psi.PsiFile file) {
         if (language == EditorLanguage.JAVASCRIPT
-                && "TypeScript".equals(file.getLanguage().getID())) {
+                && JavaScriptEditorElementExtractor.isTypeScript(file)) {
             return EditorLanguage.TYPESCRIPT;
         }
         return language;

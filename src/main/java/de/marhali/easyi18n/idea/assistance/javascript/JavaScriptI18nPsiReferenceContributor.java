@@ -87,7 +87,7 @@ public class JavaScriptI18nPsiReferenceContributor extends PsiReferenceContribut
             // TypeScript is a JavaScript dialect — detect actual language at runtime
             // to avoid duplicate references when language="JavaScript" also runs for TS files.
             EditorLanguage effectiveLang = (language == EditorLanguage.JAVASCRIPT
-                    && "TypeScript".equals(literal.getContainingFile().getLanguage().getID()))
+                    && JavaScriptEditorElementExtractor.isTypeScript(literal.getContainingFile()))
                 ? EditorLanguage.TYPESCRIPT : language;
             JavaScriptEditorElementExtractor extractor = new JavaScriptEditorElementExtractor(effectiveLang);
             EditorElement editorElement = extractor.extract(literal, literal.getContainingFile());
@@ -104,7 +104,7 @@ public class JavaScriptI18nPsiReferenceContributor extends PsiReferenceContribut
             }
 
             PossiblyUnavailable<Optional<I18nEntryPreview>> entryResponse
-                = projectService.query(new I18nEntryPreviewQuery(moduleId, I18nKeyCandidate.of(key)));
+                = projectService.query(new I18nEntryPreviewQuery(moduleId, I18nKeyCandidate.of(editorElement.i18nKey())));
 
             if (!entryResponse.available()) {
                 // Response is not available - module is not loaded yet

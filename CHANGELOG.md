@@ -7,6 +7,14 @@
 ### Added
 
 - Preset for AngularJS projects that use transloco for internationalization
+- Preset for Next.js / React projects that use next-intl (use-intl) for internationalization
+- Namespace support for translation functions like `const t = useTranslations('footer')` so that `t('title')` resolves to `footer.title`
+- Namespaces (intermediate nodes of nested keys) are recognized as valid references and show their nested keys in the documentation popup
+- Editor rule constraint `CALLABLE_ORIGIN` to match calls of translation functions by the factory that created them
+
+### Fixed
+
+- TSX files are now treated as TypeScript for editor rules
 
 ## [5.0.2] - 2026-05-03
 

@@ -65,6 +65,22 @@ Ruby on Rails with the standard [I18n gem](https://guides.rubyonrails.org/i18n.h
 
 ---
 
+### next-intl
+
+[next-intl](https://next-intl.dev/) and [use-intl](https://next-intl.dev/docs/environments/core-library) for Next.js and React.
+
+- **File format**: JSON
+- **File layout**: `messages/{locale}.json` with nested keys
+- **Key format**: dot-separated (`footer.title`)
+- **Flavor template**: `t('{i18nKey}')`
+- **Namespaces**: the namespace passed to `useTranslations('footer')` / `getTranslations('footer')` is resolved automatically, so `t('title')` refers to `footer.title`. Completion inside `t('…')` only suggests keys of that namespace.
+- **Editor rules**:
+  - `t('key')`, `t.rich('key')`, `t.markup('key')`, `t.raw('key')`, `t.has('key')` — translation functions created by `useTranslations`, `getTranslations` or `createTranslator` (JavaScript, TypeScript)
+  - `useTranslations('namespace')`, `getTranslations('namespace')` — namespace declaration
+  - `getTranslations({locale, namespace: 'namespace'})` — namespace declaration via options object
+
+---
+
 ### Spring Boot
 
 [Spring Boot MessageSource](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/context/MessageSource.html) and Java `ResourceBundle`.

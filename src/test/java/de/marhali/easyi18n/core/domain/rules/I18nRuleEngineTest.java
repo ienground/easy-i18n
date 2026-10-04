@@ -56,4 +56,50 @@ public class I18nRuleEngineTest {
         boolean isI18nLiteral = match.matched();
         Assert.assertTrue(isI18nLiteral);
     }
+
+    @Test
+    public void test_callable_origin() {
+        List<EditorRule> rules = List.of(
+            new EditorRule(
+                "next-intl-t",
+                Set.of(EditorLanguage.TYPESCRIPT),
+                TriggerKind.CALL_ARGUMENT,
+                List.of(
+                    EditorRuleConstraint.match(RuleConstraintType.CALLABLE_ORIGIN, "useTranslations|getTranslations", TextMatchMode.REGEX),
+                    EditorRuleConstraint.exact(RuleConstraintType.ARGUMENT_INDEX, "0")
+                ),
+                0,
+                false
+            )
+        );
+
+        I18nRuleEngine engine = new I18nRuleEngine(new RuleCompiler().compile(rules));
+
+        EditorElement scoped = EditorElement.builder(
+                EditorLanguage.TYPESCRIPT,
+                LiteralKind.STRING,
+                TriggerKind.CALL_ARGUMENT,
+                "title"
+            )
+            .callableName("tShell")
+            .callableOrigin("useTranslations")
+            .keyPrefix("shell.")
+            .argumentIndex(0)
+            .build();
+
+        EditorElement unrelated = EditorElement.builder(
+                EditorLanguage.TYPESCRIPT,
+                LiteralKind.STRING,
+                TriggerKind.CALL_ARGUMENT,
+                "title"
+            )
+            .callableName("t")
+            .argumentIndex(0)
+            .build();
+
+        Assert.assertTrue(engine.match(scoped).matched());
+        Assert.assertFalse(engine.match(unrelated).matched());
+        Assert.assertEquals("shell.title", scoped.i18nKey());
+        Assert.assertEquals("title", unrelated.i18nKey());
+    }
 }

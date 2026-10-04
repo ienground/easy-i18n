@@ -86,6 +86,7 @@ Each rule can have any number of constraints. **All constraints must pass** for 
 | `CALLABLE_NAME`     | Name of the called method or function (e.g. `t`, `getString`, `translate`).                                                                                             |
 | `CALLABLE_FQN`      | Fully-qualified name of the callable, including the class (e.g. `java.util.ResourceBundle.getString`). Available when the language extractor can resolve the reference. |
 | `RECEIVER_TYPE_FQN` | Fully-qualified type of the receiver object in a method-call chain (e.g. `java.util.ResourceBundle`).                                                                   |
+| `CALLABLE_ORIGIN`   | Name of the factory call that created the called translation function, e.g. `useTranslations` for `const t = useTranslations('footer')`. Currently JavaScript-family only. |
 | `ARGUMENT_INDEX`    | Zero-based index of the argument position (e.g. `0` for the first argument).                                                                                            |
 | `ARGUMENT_NAME`     | Name of the formal parameter at that argument position. Available when the language extractor can resolve the method signature.                                         |
 

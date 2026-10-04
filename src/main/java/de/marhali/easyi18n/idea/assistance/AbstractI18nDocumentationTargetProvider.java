@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import de.marhali.easyi18n.core.application.cqrs.PossiblyUnavailable;
 import de.marhali.easyi18n.core.application.query.I18nEntryPreviewQuery;
+import de.marhali.easyi18n.core.application.query.I18nNamespacePreviewQuery;
 import de.marhali.easyi18n.core.application.query.MatchEditorElementQuery;
 import de.marhali.easyi18n.core.application.query.ModuleIdByEditorFilePathQuery;
 import de.marhali.easyi18n.core.domain.model.I18nEntryPreview;
@@ -47,7 +48,7 @@ public abstract class AbstractI18nDocumentationTargetProvider implements Documen
             return List.of();
         }
 
-        String key = editorElement.literalValue();
+        String key = editorElement.i18nKey();
         if (key.isBlank()) {
             return List.of();
         }
@@ -77,9 +78,24 @@ public abstract class AbstractI18nDocumentationTargetProvider implements Documen
         }
 
         if (entryResponse.result() == null || entryResponse.result().isEmpty()) {
-            return List.of();
+            return namespaceDocumentationTargets(file, moduleId, key);
         }
 
         return List.of(new I18nKeyDocumentationTarget(file, moduleId, entryResponse.result().get()));
+    }
+
+    private @NotNull List<? extends @NotNull DocumentationTarget> namespaceDocumentationTargets(
+        @NotNull PsiFile file, @NotNull ModuleId moduleId, @NotNull String key
+    ) {
+        I18nProjectService projectService = file.getProject().getService(I18nProjectService.class);
+
+        PossiblyUnavailable<List<I18nEntryPreview>> childrenResponse
+            = projectService.query(new I18nNamespacePreviewQuery(moduleId, I18nKeyCandidate.of(key)));
+
+        if (!childrenResponse.available() || childrenResponse.result() == null || childrenResponse.result().isEmpty()) {
+            return List.of();
+        }
+
+        return List.of(new I18nNamespaceDocumentationTarget(file, moduleId, key, childrenResponse.result()));
     }
 }

@@ -18,6 +18,11 @@ import java.util.*;
  */
 public class I18nKeyCandidateResolver {
 
+    /**
+     * Characters that separate a namespace from its nested keys (e.g. {@code footer.title} or {@code common:title}).
+     */
+    private static final String NAMESPACE_SEPARATORS = ".:";
+
     private final @NotNull ProjectConfigPort projectConfigPort;
     private final @NotNull I18nStore store;
 
@@ -37,6 +42,46 @@ public class I18nKeyCandidateResolver {
         }
 
         return null;
+    }
+
+    /**
+     * Resolves the given key candidate as a namespace, i.e. an intermediate node of nested translation keys.
+     * @param moduleId Module identifier
+     * @param keyCandidate Translation key candidate (e.g. {@code footer} for {@code footer.title})
+     * @return Sorted list of child entries or an empty list if the candidate does not denote a namespace
+     */
+    public @NotNull List<@NotNull I18nEntry> resolveNamespace(@NotNull ModuleId moduleId, @NotNull I18nKeyCandidate keyCandidate) {
+        I18nModule moduleStore = store.getSnapshot().getModuleOrThrow(moduleId);
+
+        for (I18nKey key : constructKeys(moduleId, keyCandidate)) {
+            List<I18nEntry> children = new ArrayList<>();
+
+            for (Map.Entry<@NotNull I18nKey, @NotNull I18nContent> entry : moduleStore.translations().entrySet()) {
+                if (isNamespaceOf(key, entry.getKey())) {
+                    children.add(I18nEntry.fromEntry(entry));
+                }
+            }
+
+            if (!children.isEmpty()) {
+                // First match will resolve
+                children.sort(Comparator.comparing(I18nEntry::key));
+                return children;
+            }
+        }
+
+        return List.of();
+    }
+
+    private boolean isNamespaceOf(@NotNull I18nKey namespace, @NotNull I18nKey key) {
+        String ns = namespace.canonical();
+        String canonical = key.canonical();
+
+        if (ns.isEmpty() || canonical.length() <= ns.length() + 1 || !canonical.startsWith(ns)) {
+            return false;
+        }
+
+        char separator = canonical.charAt(ns.length());
+        return NAMESPACE_SEPARATORS.indexOf(separator) >= 0;
     }
 
     private @NotNull Set<@NotNull I18nKey> constructKeys(@NotNull ModuleId moduleId, @NotNull I18nKeyCandidate keyCandidate) {

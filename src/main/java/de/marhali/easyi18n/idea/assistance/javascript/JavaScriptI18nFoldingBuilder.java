@@ -46,6 +46,11 @@ public class JavaScriptI18nFoldingBuilder extends AbstractI18nFoldingBuilder {
                     return;
                 }
 
+                String keyPrefix = JavaScriptTranslatorResolver.resolveKeyPrefix(literal);
+                if (keyPrefix != null) {
+                    key = keyPrefix + key;
+                }
+
                 consumer.accept(key, literal.getNode(), literal.getTextRange());
             }
         });
