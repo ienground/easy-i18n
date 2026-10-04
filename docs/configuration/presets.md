@@ -73,7 +73,7 @@ Ruby on Rails with the standard [I18n gem](https://guides.rubyonrails.org/i18n.h
 - **File layout**: `messages/{locale}.json` with nested keys
 - **Key format**: dot-separated (`footer.title`)
 - **Flavor template**: `t('{i18nKey}')`
-- **Namespaces**: the namespace passed to `useTranslations('footer')` / `getTranslations('footer')` is resolved automatically, so `t('title')` refers to `footer.title`. Completion inside `t('…')` only suggests keys of that namespace.
+- **Namespaces**: the namespace passed to `useTranslations('footer')` / `getTranslations('footer')` is resolved automatically, so `t('title')` refers to `footer.title`. Completion inside `t('…')` only suggests keys of that namespace. Translation functions passed as parameters or props are resolved by their type annotation (e.g. `ReturnType<typeof useTranslations<'footer'>>`). Namespaced keys also resolve in the namespace file layout (`messages/{locale}/{namespace}.json` with `connector:domains.title`).
 - **Editor rules**:
   - `t('key')`, `t.rich('key')`, `t.markup('key')`, `t.raw('key')`, `t.has('key')` — translation functions created by `useTranslations`, `getTranslations` or `createTranslator` (JavaScript, TypeScript)
   - `useTranslations('namespace')`, `getTranslations('namespace')` — namespace declaration

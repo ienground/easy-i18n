@@ -7,6 +7,7 @@ import com.intellij.psi.*;
 import com.intellij.util.ProcessingContext;
 import de.marhali.easyi18n.core.application.cqrs.PossiblyUnavailable;
 import de.marhali.easyi18n.core.application.query.I18nEntryPreviewQuery;
+import de.marhali.easyi18n.core.application.query.I18nNamespacePreviewQuery;
 import de.marhali.easyi18n.core.application.query.MatchEditorElementQuery;
 import de.marhali.easyi18n.core.application.query.ModuleIdByEditorFilePathQuery;
 import de.marhali.easyi18n.core.domain.model.I18nEntryPreview;
@@ -17,10 +18,12 @@ import de.marhali.easyi18n.core.domain.rules.EditorFilePath;
 import de.marhali.easyi18n.core.domain.rules.EditorLanguage;
 import de.marhali.easyi18n.idea.assistance.EditorFilePathExtractor;
 import de.marhali.easyi18n.idea.assistance.I18nKeyPsiReference;
+import de.marhali.easyi18n.idea.assistance.I18nNamespacePsiReference;
 import de.marhali.easyi18n.idea.service.I18nProjectService;
 import de.marhali.easyi18n.idea.service.ScheduledModuleLoaderService;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -115,6 +118,18 @@ public class JavaScriptI18nPsiReferenceContributor extends PsiReferenceContribut
             if (entryResponse.result() != null && entryResponse.result().isPresent()) {
                 return new PsiReference[] {
                     new I18nKeyPsiReference<>(literal, moduleId, entryResponse.result().orElseThrow())
+                };
+            }
+
+            // Namespaces like useTranslations('footer') navigate to their nested keys
+            PossiblyUnavailable<List<I18nEntryPreview>> namespaceResponse
+                = projectService.query(new I18nNamespacePreviewQuery(moduleId, editorElement.keyCandidate()));
+
+            if (namespaceResponse.result() != null && !namespaceResponse.result().isEmpty()) {
+                return new PsiReference[] {
+                    new I18nNamespacePsiReference<>(
+                        literal, moduleId, editorElement.keyCandidate().display(), namespaceResponse.result()
+                    )
                 };
             }
 

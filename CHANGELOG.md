@@ -13,6 +13,8 @@
 - Editor rule constraint `CALLABLE_ORIGIN` to match calls of translation functions by the factory that created them
 - Namespaced translation keys also resolve in the namespace file layout, e.g. `useTranslations('connector.domains')` with `t('title')` resolves to `connector:domains.title`
 - Extract Translation uses a namespaced translation function in scope, e.g. `t('title')` instead of `t('footer.title')`
+- Translation functions passed as parameters or props are resolved by their type annotation, e.g. `{ t }: { t: ReturnType<typeof useTranslations<'footer'>> }`
+- Ctrl+Click on a namespace (e.g. `useTranslations('footer')`) focuses its nested keys in the tool window
 
 ### Fixed
 

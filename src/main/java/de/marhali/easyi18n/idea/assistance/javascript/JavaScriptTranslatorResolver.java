@@ -1,15 +1,22 @@
 package de.marhali.easyi18n.idea.assistance.javascript;
 
 import com.intellij.lang.javascript.psi.*;
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptInterface;
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptPropertySignature;
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptSingleType;
+import com.intellij.lang.javascript.psi.ecma6.TypeScriptTypeAlias;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiInvalidElementAccessException;
+import com.intellij.psi.PsiNamedElement;
 import com.intellij.psi.util.PsiTreeUtil;
 import de.marhali.easyi18n.core.domain.model.I18nKeyCandidate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Resolves translation functions that are bound to a variable, such as
@@ -17,7 +24,10 @@ import java.util.Set;
  *
  * <p>Calls like {@code t('title')}, {@code t.rich('title')} or {@code t.has('title')} are traced back to
  * the factory call that created {@code t}. Its name is exposed as callable origin and a statically known
- * namespace is exposed as key prefix ({@code footer.}) so that the call resolves to {@code footer.title}.
+ * namespace is exposed as key namespace so that the call resolves to {@code footer.title}.
+ *
+ * <p>Translation functions passed around as parameters or props are resolved by their type annotation, e.g.
+ * {@code { t }: { t: ReturnType<typeof useTranslations<'footer'>> }}.
  *
  * @author marhali
  */
@@ -34,6 +44,18 @@ public final class JavaScriptTranslatorResolver {
     private static final Set<String> TRANSLATOR_METHODS = Set.of("rich", "markup", "raw", "has");
 
     private static final String NAMESPACE_OPTION = "namespace";
+
+    /**
+     * Type annotation of a translation function, e.g. {@code ReturnType<typeof useTranslations<'footer'>>}.
+     */
+    private static final Pattern TYPED_TRANSLATOR = Pattern.compile(
+        "\\b(useTranslations|getTranslations|createTranslator)\\b\\s*(?:<\\s*['\"]([^'\"]*)['\"])?"
+    );
+
+    /**
+     * Maximum number of type aliases to follow when resolving a type annotation.
+     */
+    private static final int MAX_TYPE_DEPTH = 5;
 
     private JavaScriptTranslatorResolver() {}
 
@@ -117,7 +139,8 @@ public final class JavaScriptTranslatorResolver {
 
         if (!(resolved instanceof JSVariable variable)
             || !(unwrap(variable.getInitializer()) instanceof JSCallExpression factoryCall)) {
-            return null;
+            // Translation function passed as parameter or prop
+            return resolveTyped(resolved);
         }
 
         String factoryName = callableName(factoryCall);
@@ -181,15 +204,68 @@ public final class JavaScriptTranslatorResolver {
             return null;
         }
 
-        JSExpression qualifier = reference.getQualifier();
-        if (qualifier == null) {
-            return reference; // t('key')
+        if (reference.getQualifier() instanceof JSReferenceExpression qualifierReference
+            && TRANSLATOR_METHODS.contains(reference.getReferenceName())) {
+            return qualifierReference; // t.rich('key'), props.t.rich('key')
         }
 
-        if (qualifier instanceof JSReferenceExpression qualifierReference
-            && qualifierReference.getQualifier() == null
-            && TRANSLATOR_METHODS.contains(reference.getReferenceName())) {
-            return qualifierReference; // t.rich('key')
+        return reference; // t('key'), props.t('key')
+    }
+
+    private static @Nullable Translator resolveTyped(@Nullable PsiElement resolved) {
+        String typeText = translatorTypeText(resolved);
+        if (typeText == null) {
+            return null;
+        }
+
+        Matcher matcher = TYPED_TRANSLATOR.matcher(typeText);
+        if (!matcher.find()) {
+            return null;
+        }
+
+        String namespace = matcher.group(2);
+        return new Translator(matcher.group(1), namespace == null || namespace.isEmpty() ? null : namespace);
+    }
+
+    private static @Nullable String translatorTypeText(@Nullable PsiElement resolved) {
+        // Only values can hold a translation function. Functions like useTranslations itself are excluded
+        if (!(resolved instanceof JSVariable) && !(resolved instanceof TypeScriptPropertySignature)) {
+            return null;
+        }
+
+        // t: ReturnType<typeof useTranslations<'footer'>> (parameter or property signature for props.t)
+        if (resolved instanceof JSTypeDeclarationOwner owner && owner.getTypeElement() != null) {
+            return owner.getTypeElement().getText();
+        }
+
+        // { t }: Props
+        JSDestructuringParameter parameter = PsiTreeUtil.getParentOfType(resolved, JSDestructuringParameter.class);
+        if (parameter != null && resolved instanceof PsiNamedElement named && named.getName() != null) {
+            return memberTypeText(parameter.getTypeElement(), named.getName(), 0);
+        }
+
+        return null;
+    }
+
+    private static @Nullable String memberTypeText(@Nullable PsiElement typeElement, @NotNull String name, int depth) {
+        if (typeElement == null || depth > MAX_TYPE_DEPTH) {
+            return null;
+        }
+
+        // Named type, e.g. Props or IProps
+        if (typeElement instanceof TypeScriptSingleType singleType && singleType.getReferenceExpression() != null) {
+            PsiElement declaration = singleType.getReferenceExpression().resolve();
+            if (declaration instanceof TypeScriptTypeAlias alias) {
+                return memberTypeText(alias.getTypeDeclaration(), name, depth + 1);
+            }
+            return declaration instanceof TypeScriptInterface ? memberTypeText(declaration, name, depth + 1) : null;
+        }
+
+        // Object type or interface body
+        for (TypeScriptPropertySignature signature : PsiTreeUtil.findChildrenOfType(typeElement, TypeScriptPropertySignature.class)) {
+            if (name.equals(signature.getName()) && signature.getTypeElement() != null) {
+                return signature.getTypeElement().getText();
+            }
         }
 
         return null;

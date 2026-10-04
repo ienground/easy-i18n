@@ -47,6 +47,12 @@
       implementationClass="de.marhali.easyi18n.idea.assistance.javascript.JavaScriptI18nFoldingBuilder"
     />
 
+    <!-- Prefer translation targets over unrelated declarations on Ctrl+Click -->
+    <gotoDeclarationHandler
+      order="first"
+      implementation="de.marhali.easyi18n.idea.assistance.javascript.JavaScriptI18nGotoDeclarationHandler"
+    />
+
     <!-- Documentation Provider (handles JavaScript, TypeScript, Vue, Svelte) -->
     <platform.backend.documentation.targetProvider
       implementation="de.marhali.easyi18n.idea.assistance.javascript.JavaScriptI18nDocumentationTargetProvider"

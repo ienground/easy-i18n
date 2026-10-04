@@ -128,6 +128,21 @@ public final class ToolWindowViewModel implements PluginTopics.DomainListener {
         );
     }
 
+    /**
+     * Selects the panel of the given module and focuses the given key.
+     * @param moduleId Module identifier
+     * @param key Translation key to focus
+     */
+    public void focusKey(@NotNull ModuleId moduleId, @NotNull I18nKey key) {
+        for (Content content : contentManager.getContents()) {
+            if (moduleId.equals(content.getUserData(PluginKey.MODULE_ID))) {
+                contentManager.setSelectedContent(content, true);
+                break;
+            }
+        }
+        reloadModule(moduleId, key);
+    }
+
     public void handleCommandAsync(@NotNull Command command) {
         I18nProjectService projectService = project.getService(I18nProjectService.class);
         PluginExecutorService executorService = project.getService(PluginExecutorService.class);
@@ -157,6 +172,7 @@ public final class ToolWindowViewModel implements PluginTopics.DomainListener {
                 .createContent(modulePanel.getComponent(), moduleId.name(), false);
 
             moduleContent.putUserData(PluginKey.MODULE_ID, moduleId);
+            moduleContent.putUserData(PluginKey.TOOL_WINDOW_VIEW_MODEL, this);
             moduleContent.setPreferredFocusableComponent(modulePanel);
             moduleContent.setDisposer(modulePanel);
             contentManager.addContent(moduleContent);

@@ -51,6 +51,10 @@ dependencies {
         bundledModules(providers.gradleProperty("platformBundledModules").map { it.split(',') })
 
         testFramework(TestFrameworkType.Platform)
+
+        // Required by the JavaScript plugin in tests
+        testBundledModule("com.intellij.modules.ultimate")
+        testBundledPlugins("com.intellij.css", "com.intellij.modules.json")
     }
 }
 
@@ -136,6 +140,12 @@ kover {
 tasks {
     wrapper {
         gradleVersion = providers.gradleProperty("gradleVersion").get()
+    }
+
+    test {
+        // Only load the plugins required by the tests. Other language plugins (e.g. Ruby, Python)
+        // fail or never finish indexing inside the light test project.
+        systemProperty("idea.load.plugins.id", "de.marhali.easyi18n,JavaScript,com.intellij.css,com.intellij.modules.json")
     }
 
     publishPlugin {
