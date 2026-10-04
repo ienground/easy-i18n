@@ -1,5 +1,6 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
@@ -158,6 +159,18 @@ intellijPlatformTesting {
 
             plugins {
                 robotServerPlugin()
+            }
+        }
+
+        // Run the plugin inside WebStorm. Uses a local installation if `webStormPath` is set
+        // (e.g. -PwebStormPath=~/Applications/WebStorm.app), otherwise downloads WebStorm `platformVersion`.
+        register("runWebStorm") {
+            val webStormPath = providers.gradleProperty("webStormPath")
+            if (webStormPath.isPresent) {
+                localPath = file(webStormPath.get())
+            } else {
+                type = IntelliJPlatformType.WebStorm
+                version = providers.gradleProperty("platformVersion")
             }
         }
     }
